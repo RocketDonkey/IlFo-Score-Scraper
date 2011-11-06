@@ -1,14 +1,15 @@
 #! /usr/bin/Python27
 
 import sys
+import os
 import re
 import urllib
 import csv
 import decimal
 from functools import partial
 
-spamWriter = csv.writer(open('C:\\Users\\TBowland\\Documents\\Python\\Il Fornaio\\' + \
-                             'eggs.csv', 'wb'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
+#spamWriter = csv.writer(open('C:\\Users\\TBowland\\Documents\\Python\\Il Fornaio\\' + \
+#                             'eggs.csv', 'wb'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
 
 """
 Il Fornaio Scores Generator
@@ -22,11 +23,6 @@ This program pulls scores from:
 -Zagat
 """
 
-def ReviewOutput(allinfo, location):
-
-    print 'Hello'
-
-    
 """*****CITYSEARCH*****"""        
 def CitySearch(urltext): #COMPLETE#
     #No Del Mar, Reston, Seattle has location but no score
@@ -81,9 +77,6 @@ def OpenTable(urltext): #COMPLETE#
     allinfo = re.search('Overall[\W]+</div><div class="BVRRRatingNormalImage"> ' + \
                         '<img src="http://opentable.ugc.bazaarvoice.com/0938/' + \
                         '(\d)_(\d)/5/rating.gif', urltext)
-
-    #location = re.search('<h1 class="RestProfileTitle">[\W]+Il Fornaio' + \
-    #                    '[\W]+-[\W]+([\w\W]+)</h1>',urltext)
 
     #Location regex
     location = re.search('<title>[\s]*(Canaletto)?(?:\sRistorante\sVeneto)?(?:\sRestaurant)?(?:Il Fornaio)?\s(?:-\s[\w\s]+)?- ([\w\s]+)',urltext)
@@ -150,7 +143,7 @@ def Yelp(urltext):#COMPLETE#
 
 
 ############################
-def wget(url):
+def wget(url, FuncToCall):
     try:
         ufile = urllib.urlopen(url)
         if ufile.info().gettype() == 'text/html':
@@ -160,22 +153,39 @@ def wget(url):
             #CitySearch(text)
             #TripAdvisor(text)
             #Google(text)
-            Yelp(text)
+            #Yelp(text)
+            globals()[FuncToCall](text)
     except IOError:
         print 'URL skipped.'
 
 
-def GetFile(texttoopen):
-    OTFile = open(texttoopen,'rU')
+def GetFile(URLtoOpen, FuncToCall):
+    """Very cool code! Let's you pass a string as a function."""
+    #globals()['FuncToCall']('donkey')
+
+    #Open the txt and pass each line as the URL to check
+    OTFile = open(URLtoOpen,'rU')
+    print '*' * 10 + FuncToCall + '*' * 10
     for line in OTFile:
-        wget(line)    
+        #'line' is the URL; 'FuncToCall' is the str function to call
+        wget(line, FuncToCall)    
+
 
 def main():
-    #inputter = raw_input('Input URL: ')
-    #wget(inputter)
-    #GetFile('OpenTable.txt')
-    
-    GetFile('Yelp.txt')
+    """MAIN FUNCTION"""
+    #Pull all text files from subdir /URL_Files.
+    #Create a path based on the current file dir and the 'URL_Files' folder
+    path = os.path.join(os.getcwd(), 'URL_Files')
+    file_list = os.listdir(os.getcwd() + '\\URL_Files')
+
+    """
+    #Pass each file and its corresponding function to wget.
+    #Corresponding function name is the pre-txt part of filename
+    """
+    for filer in file_list:
+        filer = os.path.join(path, filer)
+        GetFile(filer, str(re.search(r'([\w]+)\.txt', filer).group(1)))
+
 
 if __name__ == '__main__':
     main()
