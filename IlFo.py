@@ -8,8 +8,18 @@ import csv
 import decimal
 from functools import partial
 
-#spamWriter = csv.writer(open('C:\\Users\\TBowland\\Documents\\Python\\Il Fornaio\\' + \
-#                             'eggs.csv', 'wb'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
+"""CREATE MASTER DICT THAT WILL HOLD ALL INFORMATION"""
+    
+"""RESTAURANTS"""
+rest_list = open('Restaurant_List.txt', 'rU')
+rest_list = rest_list.readlines()
+
+#Populate all of the restaurant names, and for each name add the empty site_dict
+rest_dict = {}
+for rest in rest_list:
+    if rest[-1:] == '\n':
+        rest_dict[rest[:-1]] = {}
+    else: rest_dict[rest] = {} 
 
 """
 Il Fornaio Scores Generator
@@ -38,15 +48,24 @@ def CitySearch(urltext): #COMPLETE#
     else:score = 'NO SCORE'
     
     #location = re.search('<meta property=\"og:locality\"\scontent\=\"([\w\s]+)\"/>', urltext)
-    location = re.search('<title>(Canaletto)?(?:\sRistorante\sVeneto)?(?:Il Fornaio)?(?:IL Fornaio)?(?:Ilfornaio)?\s(?:-\s[\w\s]+)?-\s([\w\s]+),\s\w\w',urltext)
+    location = re.search('<title>(Canaletto)?(?:\sRistorante\sVeneto)?(?:Il Fornaio)?'
+                         '(?:IL Fornaio)?(?:Ilfornaio)?\s(?:-\s[\w\s]+)?-\s([\w\s]+),\s\w\w',urltext)
 
     #Create location string
-    if location.group(1):locationgroup = location.group(1) + ' ' + location.group(2) #If Canaletto, add location to 'Canaletto'
-    else:locationgroup = location.group(2) #If 'Il Fornaio' is present, location is just group(2)
+    #If Canaletto, add location to 'Canaletto'
+    if location.group(1):locationgroup = location.group(1) + ' ' + location.group(2)
 
+    #If 'Il Fornaio' is present, location is just group(2)
+    else:locationgroup = location.group(2) 
+
+    #This isn't super clean, but Carmel prints as 'Carmel-By-The-Sea'. This converts it to 'Carmel'.
+    if locationgroup == 'Carmel By the Sea':locationgroup = 'Carmel'
+    
     #Create location/score string
-    if allinfo:print locationgroup + ' ' + score
-    else:print locationgroup + ' NO INFO SON'
+    if allinfo:rest_dict[locationgroup]['CitySearch'] = score
+    else:rest_dict[locationgroup]['CitySearch'] = 'N/A'
+
+    #print locationgroup + str(rest_dict[locationgroup])
 
 
 """*****GOOGLE*****"""  
@@ -68,7 +87,14 @@ def Google(urltext): #COMPLETE#
     if locationstateRE:
         locationgroup = locationgroup[0:-3] #If state included, remove it
 
-    print locationgroup + ' ' + allinfo.group(1)
+    #Sentence case the location (it pulls as all lowercase)
+    locationgroup = locationgroup.title()
+
+    #Create location/score string
+    if allinfo:rest_dict[locationgroup]['Google'] = allinfo.group(1)
+    else:rest_dict[locationgroup]['Google'] = 'N/A'
+
+    #print locationgroup + ' ' + allinfo.group(1)
     
 
 """*****OPENTABLE*****"""  
@@ -85,7 +111,11 @@ def OpenTable(urltext): #COMPLETE#
     if location.group(1):locationgroup = location.group(1) + ' ' + location.group(2) #If Canaletto, add location to 'Canaletto'
     else:locationgroup = location.group(2) #If 'Il Fornaio' is present, location is just group(2)
 
-    print locationgroup + ' ' + allinfo.group(1) + '.' + allinfo.group(2)
+    #Create location/score string
+    if allinfo:rest_dict[locationgroup]['OpenTable'] = allinfo.group(1) + '.' + allinfo.group(2)
+    else:rest_dict[locationgroup]['OpenTable'] = 'N/A'
+
+    #print locationgroup + ' ' + allinfo.group(1) + '.' + allinfo.group(2)
 
 
 """*****TRIPADVISOR*****"""  
@@ -102,25 +132,36 @@ def TripAdvisor(urltext): #COMPLETE#
     else:locationgroup = location.group(2) #If 'Il Fornaio' is present, location is just group(2)
 
     #Create location/score string
-    if allinfo.group(1):print locationgroup + ' ' + allinfo.group(1)
-    else:print locationgroup + ' NO INFO SON'
+    #if allinfo.group(1):print locationgroup + ' ' + allinfo.group(1)
+    #else:print locationgroup + ' N/A'
+
+    if allinfo.group(1):rest_dict[locationgroup]['TripAdvsior'] = allinfo.group(1)
+    else:rest_dict[locationgroup]['TripAdvisor'] = 'N/A'
+
     
         
 """*****URBANSPOON*****"""  
 def UrbanSpoon(urltext):#COMPLETE#
     #Rating regex
-    allinfo = re.search('[\"\'](?:average\s)?(?:digits\s)?percent-text rating(?:\saverage)?\\\["\']>(\d\d)', urltext)
+    allinfo = re.search('[\"\'](?:average\s)?(?:digits\s)?percent-text rating'
+                        '(?:\saverage)?\\\["\']>(\d\d)', urltext)
 
     #Location regex
-    location = re.search('<title>(Canaletto)?(?:Il\sFornaio)?[\s\w\/]+(?:-[\/\w\s]*)?-\s([\w\s]+)(?:[-\w]+)?\s\|', urltext)
+    location = re.search('<title>(Canaletto)?(?:Il\sFornaio)?[\s\w\/]+'
+                         '(?:-[\/\w\s]*)?-\s([\w\s]+)(?:[-\w]+)?\s\|', urltext)
 
     #Create location string
     if location.group(1):locationgroup = location.group(1) + ' ' + location.group(2) #If Canaletto, add location to 'Canaletto'
     else:locationgroup = location.group(2) #If 'Il Fornaio' is present, location is just group(2)
 
     #Create location/score string
-    if allinfo:print locationgroup + ' ' + str(round(decimal.Decimal(allinfo.group(1)) / decimal.Decimal('20'),1))
-    else:print locationgroup + ' NO INFO SON'
+    #if allinfo:print locationgroup + ' ' + str(round(decimal.Decimal(allinfo.group(1)) / decimal.Decimal('20'),1))
+    #else:print locationgroup + ' N/A'
+
+    #Create location/score string
+    if allinfo:rest_dict[locationgroup]['UrbanSpoon'] = str(round(decimal.Decimal(allinfo.group(1)) / decimal.Decimal('20'),1))
+    else:rest_dict[locationgroup]['UrbanSpoon'] = 'N/A'
+
 
 
 """*****YELP*****"""  
@@ -131,16 +172,20 @@ def Yelp(urltext):#COMPLETE#
                         'width=\"[\d]+\"\sheight=\"[\d]+\"\stitle=\"(\d\.\d)', urltext)
     
     #Location regex                    
-    location = re.search('<title>(Il\sFornaio)?(\sRestaurant \& Bakery)?(Canaletto)?\s[-\s\w]*-+\s*([\w\s]+),\s\w\w</title>', urltext)
+    location = re.search('<title>(Il\sFornaio)?(\sRestaurant \& Bakery)?(Canaletto)?\s[-\s\w]*-+'
+                         '\s*([\w\s]+),\s\w\w</title>', urltext)
 
     #Create location string
     if location.group(1):locationgroup = location.group(4) #If 'Il Fornaio' is present, location is just group(4)
     else:locationgroup = location.group(3) + ' ' + location.group(4) #If Canaletto, add location to 'Canaletto'
 
     #Create location/score string
-    if allinfo.group(1):print locationgroup + ' ' + allinfo.group(1)
-    else:print locationgroup + ' NO INFO SON'
+    #if allinfo.group(1):print locationgroup + ' ' + allinfo.group(1)
+    #else:print locationgroup + ' N/A'
 
+    #Create location/score string
+    if allinfo.group(1):rest_dict[locationgroup]['Yelp'] = allinfo.group(1)
+    else:rest_dict[locationgroup]['Yelp'] = 'N/A'
 
 ############################
 def wget(url, FuncToCall):
@@ -156,8 +201,13 @@ def wget(url, FuncToCall):
             #Yelp(text)
             globals()[FuncToCall](text)
     except IOError:
-        print 'URL skipped.'
-
+        """
+        In the .txt, each line is a URL. In cases where there is a known
+        missing score, the line will just be the location.
+        Store this value and 'N/A' in the master dictionary.
+        """
+        #print url[:-1] + ' N/A'
+        rest_dict[url[:-1]][FuncToCall] = 'N/A'
 
 def GetFile(URLtoOpen, FuncToCall):
     """Very cool code! Let's you pass a string as a function."""
@@ -170,6 +220,10 @@ def GetFile(URLtoOpen, FuncToCall):
         #'line' is the URL; 'FuncToCall' is the str function to call
         wget(line, FuncToCall)    
 
+    for location, site in rest_dict.iteritems():
+        print location
+        for site1, score in site.iteritems():
+            print site1, score
 
 def main():
     """MAIN FUNCTION"""
@@ -177,11 +231,12 @@ def main():
     #Create a path based on the current file dir and the 'URL_Files' folder
     path = os.path.join(os.getcwd(), 'URL_Files')
     file_list = os.listdir(os.getcwd() + '\\URL_Files')
-
+    
     """
     #Pass each file and its corresponding function to wget.
     #Corresponding function name is the pre-txt part of filename
     """
+
     for filer in file_list:
         filer = os.path.join(path, filer)
         GetFile(filer, str(re.search(r'([\w]+)\.txt', filer).group(1)))
