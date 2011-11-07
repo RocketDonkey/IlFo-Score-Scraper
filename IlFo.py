@@ -1,4 +1,4 @@
-#! /usr/bin/Python27
+#! /usr/bin/python26
 
 import sys
 import os
@@ -6,11 +6,32 @@ import re
 import urllib
 import csv
 import decimal
-from functools import partial
+import DictCode
 
-"""CREATE MASTER DICT THAT WILL HOLD ALL INFORMATION"""
+"""
+---IL FORNAIO RATINGS PULLER---
+This program pulls scores from:
+-CitySearch
+-Google
+-OpenTable
+-Trip Advisor
+-UrbanSpoon
+-Yelp
+
+In order to run it properly, make sure that IlFo.py and DictCode.py are
+in the same folder, and that URL_Files is a subfolder.
+
+The program will look at all files in the URL_Files folder, going through
+each one and pulling the reviews for that site. The 'Restaurant List' contains
+all of the restaurants and is used to create the keys in rest_dict.
+
+The output is saved as Scores_CSV.csv in the same folder as this file.
+Additionally, output will print to the console so progress can be checked.
+"""
+
+########
     
-"""RESTAURANTS"""
+"""CREATE MASTER DICT THAT WILL HOLD ALL INFO"""
 rest_list = open('Restaurant_List.txt', 'rU')
 rest_list = rest_list.readlines()
 
@@ -21,17 +42,7 @@ for rest in rest_list:
         rest_dict[rest[:-1]] = {}
     else: rest_dict[rest] = {} 
 
-"""
-Il Fornaio Scores Generator
-This program pulls scores from:
--CitySearch
--Google
--OpenTable
--Trip Advisor
--UrbanSpoon
--Yelp
--Zagat
-"""
+########
 
 """*****CITYSEARCH*****"""        
 def CitySearch(urltext): #COMPLETE#
@@ -65,7 +76,7 @@ def CitySearch(urltext): #COMPLETE#
     if allinfo:rest_dict[locationgroup]['CitySearch'] = score
     else:rest_dict[locationgroup]['CitySearch'] = 'N/A'
 
-    #print locationgroup + str(rest_dict[locationgroup])
+    print locationgroup + ' ' + str(score)
 
 
 """*****GOOGLE*****"""  
@@ -94,7 +105,7 @@ def Google(urltext): #COMPLETE#
     if allinfo:rest_dict[locationgroup]['Google'] = allinfo.group(1)
     else:rest_dict[locationgroup]['Google'] = 'N/A'
 
-    #print locationgroup + ' ' + allinfo.group(1)
+    print locationgroup + ' ' + allinfo.group(1)
     
 
 """*****OPENTABLE*****"""  
@@ -115,7 +126,7 @@ def OpenTable(urltext): #COMPLETE#
     if allinfo:rest_dict[locationgroup]['OpenTable'] = allinfo.group(1) + '.' + allinfo.group(2)
     else:rest_dict[locationgroup]['OpenTable'] = 'N/A'
 
-    #print locationgroup + ' ' + allinfo.group(1) + '.' + allinfo.group(2)
+    print locationgroup + ' ' + allinfo.group(1) + '.' + allinfo.group(2)
 
 
 """*****TRIPADVISOR*****"""  
@@ -132,13 +143,14 @@ def TripAdvisor(urltext): #COMPLETE#
     else:locationgroup = location.group(2) #If 'Il Fornaio' is present, location is just group(2)
 
     #Create location/score string
-    #if allinfo.group(1):print locationgroup + ' ' + allinfo.group(1)
-    #else:print locationgroup + ' N/A'
+    if allinfo.group(1):
+        rest_dict[locationgroup]['TripAdvsior'] = allinfo.group(1)
+        print locationgroup + ' ' + allinfo.group(1)
+    else:
+        rest_dict[locationgroup]['TripAdvisor'] = 'N/A'
+        print locationgroup + ' N/A'
 
-    if allinfo.group(1):rest_dict[locationgroup]['TripAdvsior'] = allinfo.group(1)
-    else:rest_dict[locationgroup]['TripAdvisor'] = 'N/A'
 
-    
         
 """*****URBANSPOON*****"""  
 def UrbanSpoon(urltext):#COMPLETE#
@@ -155,12 +167,12 @@ def UrbanSpoon(urltext):#COMPLETE#
     else:locationgroup = location.group(2) #If 'Il Fornaio' is present, location is just group(2)
 
     #Create location/score string
-    #if allinfo:print locationgroup + ' ' + str(round(decimal.Decimal(allinfo.group(1)) / decimal.Decimal('20'),1))
-    #else:print locationgroup + ' N/A'
-
-    #Create location/score string
-    if allinfo:rest_dict[locationgroup]['UrbanSpoon'] = str(round(decimal.Decimal(allinfo.group(1)) / decimal.Decimal('20'),1))
-    else:rest_dict[locationgroup]['UrbanSpoon'] = 'N/A'
+    if allinfo:
+        rest_dict[locationgroup]['UrbanSpoon'] = str(round(decimal.Decimal(allinfo.group(1)) / decimal.Decimal('20'),1))
+        print locationgroup + ' ' + str(round(decimal.Decimal(allinfo.group(1)) / decimal.Decimal('20'),1))
+    else:
+        rest_dict[locationgroup]['UrbanSpoon'] = 'N/A'
+        print locationgroup + ' N/A'
 
 
 
@@ -180,12 +192,14 @@ def Yelp(urltext):#COMPLETE#
     else:locationgroup = location.group(3) + ' ' + location.group(4) #If Canaletto, add location to 'Canaletto'
 
     #Create location/score string
-    #if allinfo.group(1):print locationgroup + ' ' + allinfo.group(1)
-    #else:print locationgroup + ' N/A'
+    if allinfo.group(1):
+        rest_dict[locationgroup]['Yelp'] = allinfo.group(1)
+        print locationgroup + ' ' + allinfo.group(1)
+    else:
+        rest_dict[locationgroup]['Yelp'] = 'N/A'
+        print locationgroup + ' N/A'
 
-    #Create location/score string
-    if allinfo.group(1):rest_dict[locationgroup]['Yelp'] = allinfo.group(1)
-    else:rest_dict[locationgroup]['Yelp'] = 'N/A'
+
 
 ############################
 def wget(url, FuncToCall):
@@ -193,12 +207,7 @@ def wget(url, FuncToCall):
         ufile = urllib.urlopen(url)
         if ufile.info().gettype() == 'text/html':
             text = ufile.read()
-            #OpenTable(text)
-            #UrbanSpoon(text)
-            #CitySearch(text)
-            #TripAdvisor(text)
-            #Google(text)
-            #Yelp(text)
+            #To test individual this format: UrbanSpoon(text)
             globals()[FuncToCall](text)
     except IOError:
         """
@@ -206,7 +215,6 @@ def wget(url, FuncToCall):
         missing score, the line will just be the location.
         Store this value and 'N/A' in the master dictionary.
         """
-        #print url[:-1] + ' N/A'
         rest_dict[url[:-1]][FuncToCall] = 'N/A'
 
 def GetFile(URLtoOpen, FuncToCall):
@@ -220,10 +228,6 @@ def GetFile(URLtoOpen, FuncToCall):
         #'line' is the URL; 'FuncToCall' is the str function to call
         wget(line, FuncToCall)    
 
-    for location, site in rest_dict.iteritems():
-        print location
-        for site1, score in site.iteritems():
-            print site1, score
 
 def main():
     """MAIN FUNCTION"""
@@ -236,11 +240,32 @@ def main():
     #Pass each file and its corresponding function to wget.
     #Corresponding function name is the pre-txt part of filename
     """
-
     for filer in file_list:
         filer = os.path.join(path, filer)
         GetFile(filer, str(re.search(r'([\w]+)\.txt', filer).group(1)))
 
+    """
+    #CSV#
+    #Now that the main dict has been created, generate the CSV.
+    """
+    #Writes the dictionary to a file as text (for debugging/testing)
+    #dict_output = open('Dict_Output.txt', 'w')
+    #dict_output = dict_output.write(str(rest_dict))
+    #dict_output.close()
+
+    #Run DictCode to convert rest_dict into a list of lists that can
+    #be easily parsed by the CSV writer
+    score_output = DictCode.CSVOutput(rest_dict)
+
+    #Generate CSV
+    scores_csv = open('Scores_CSV.csv', 'wt')
+    scores_csv_w = csv.writer(scores_csv, lineterminator='\n')
+
+    #Write each line as a row
+    for line in score_output:
+        scores_csv_w.writerow(line)
+
+    scores_csv.close()
 
 if __name__ == '__main__':
     main()
